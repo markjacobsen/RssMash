@@ -9,7 +9,7 @@ public class RssMash
 {
     public static void Main(string[] args)
     {
-        Console.WriteLine("RSS Feed Aggregator started.");
+        Console.WriteLine("RSS Feed Aggregator started. "+DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
         // Check if the correct number of arguments are provided
         if (args.Length != 2)
@@ -58,7 +58,7 @@ public class RssMash
             Console.WriteLine(ex.StackTrace);
         }
 
-        Console.WriteLine("RSS Feed Aggregator finished.");
+        Console.WriteLine("RSS Feed Aggregator finished. "+DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
     }
 
     /// <summary>
