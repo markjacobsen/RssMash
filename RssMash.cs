@@ -12,11 +12,12 @@ public class RssMash
         Console.WriteLine("RSS Feed Aggregator started. "+DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
         // Check if the correct number of arguments are provided
-        if (args.Length != 2)
+        if ((args.Length < 2) || (args.Length > 3))
         {
-            Console.WriteLine("Usage: RssAggregator <inputFilePath> <outputFilePath>");
+            Console.WriteLine("Usage: RssAggregator <inputFilePath> <outputFilePath> <optionalOnOrAfterDate>");
             Console.WriteLine("  <inputFilePath>: Path to the text file containing RSS feed URLs (one URL per line).");
             Console.WriteLine("  <outputFilePath>: Path where the aggregated RSS feed will be saved.");
+            Console.WriteLine("  <optionalOnOrAfterDate>: Takes either 'today', 'yesterday' or a specific date in YYYY-MM-DD format.");
             Console.WriteLine("Example: RssAggregator C:\\Feeds\\MyFeeds.txt C:\\Output\\AggregatedFeed.xml");
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
@@ -25,6 +26,34 @@ public class RssMash
 
         string inputFilePath = args[0];
         string outputFilePath = args[1];
+        string onOrAfterDate = args.Length > 2 ? args[2] : null;
+        DateTime onOrAfterDateValue;
+
+        if (onOrAfterDate == null)
+        {
+            onOrAfterDate = "1970-01-01"; // Default to Unix epoch if no date is provided
+        }   
+        if (onOrAfterDate.Equals("today", StringComparison.OrdinalIgnoreCase))
+        {
+            onOrAfterDate = DateTime.Now.ToString("yyyy-MM-dd");
+        }
+        else if (onOrAfterDate.Equals("yesterday", StringComparison.OrdinalIgnoreCase))
+        {
+            onOrAfterDate = DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd");
+        }
+        else if (!string.IsNullOrEmpty(onOrAfterDate) && !DateTime.TryParse(onOrAfterDate, out _))
+        {
+            if (DateTime.TryParse(onOrAfterDate, out DateTime parsedDate))
+            {
+                onOrAfterDate = parsedDate.ToString("yyyy-MM-dd");
+            }
+            else
+            {
+                onOrAfterDate = DateTime.Parse("1970-01-01").ToString("yyyy-MM-dd"); // Default to Unix epoch if parsing fails
+            }
+        }
+
+        onOrAfterDateValue = DateTime.Parse(onOrAfterDate);
 
         try
         {
@@ -40,7 +69,7 @@ public class RssMash
             }
 
             // 2. Aggregate all feed items
-            SyndicationFeed outputFeed = AggregateFeeds(feedUrls);
+            SyndicationFeed outputFeed = AggregateFeeds(feedUrls, onOrAfterDateValue);
 
             // 3. Write the aggregated feed to an output file
             WriteFeedToFile(outputFeed, outputFilePath);
@@ -92,9 +121,9 @@ public class RssMash
     /// </summary>
     /// <param name="feedUrls">A list of RSS feed URLs.</param>
     /// <returns>A SyndicationFeed containing all aggregated items.</returns>
-    private static SyndicationFeed AggregateFeeds(List<string> feedUrls)
+    private static SyndicationFeed AggregateFeeds(List<string> feedUrls, DateTime onOrAfterDate)
     {
-        Console.WriteLine("Aggregating feed items...");
+        Console.WriteLine("Aggregating feed items on or after "+onOrAfterDate.ToString("yyyy-MM-dd")+"...");
         List<SyndicationItem> allItems = new List<SyndicationItem>();
 
         foreach (string url in feedUrls)
@@ -127,7 +156,10 @@ public class RssMash
         }
 
         // Order all items by publish date (most recent first)
-        List<SyndicationItem> sortedItems = allItems.OrderByDescending(item => item.PublishDate).ToList();
+        List<SyndicationItem> sortedItems = allItems
+                                                .Where(item => item.PublishDate >= onOrAfterDate)
+                                                .OrderByDescending(item => item.PublishDate)
+                                                .ToList();
 
         SyndicationFeed outputFeed = new SyndicationFeed("Aggregated RSS Feed", "A combined RSS feed from multiple sources.", new Uri("http://example.com/aggregated-feed"));
         outputFeed.LastUpdatedTime = DateTimeOffset.Now;
